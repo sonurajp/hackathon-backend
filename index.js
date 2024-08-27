@@ -11,6 +11,10 @@ const app = express();
 app.use(cors()); // Add CORS middleware
 app.use(express.json());
 
+// Configure multer for file uploads
+const uploadDirectory = 'C:/Users/sonuraj/Downloads/Upload';
+const downloadDirectory = 'C:/Users/sonuraj/Downloads/Download';
+
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI, {
@@ -46,16 +50,23 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for file upload
+// // Configure multer for file uploads to maongo
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, path.join(__dirname, 'uploads'));
+//   },
+//   filename: function (req, file, cb) {
+//     cb(null, Date.now() + '-' + file.originalname);
+//   },
+// });
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, 'uploads'));
+  destination: (req, file, cb) => {
+    cb(null, uploadDirectory);
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
   },
 });
-
 const upload = multer({ storage: storage });
 
 // File upload API
@@ -69,26 +80,33 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   });
 });
 
-// File download API
-app.get('/api/download/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, 'uploads', filename);
+// File download API to using mongo
+// app.get('/api/download/:filename', (req, res) => {
+//   const filename = req.params.filename;
+//   const filePath = path.join(__dirname, 'uploads', filename);
 
+//   if (fs.existsSync(filePath)) {
+//     res.download(filePath, filename, (err) => {
+//       if (err) {
+//         res.status(500).send({
+//           message: 'Could not download the file. ' + err,
+//         });
+//       }
+//     });
+//   } else {
+//     res.status(404).send({
+//       message: 'File not found.',
+//     });
+//   }
+// });
+app.get('/api/download/:fileName', (req, res) => {
+  const filePath = path.join(downloadDirectory, req.params.fileName);
   if (fs.existsSync(filePath)) {
-    res.download(filePath, filename, (err) => {
-      if (err) {
-        res.status(500).send({
-          message: 'Could not download the file. ' + err,
-        });
-      }
-    });
+    res.download(filePath);
   } else {
-    res.status(404).send({
-      message: 'File not found.',
-    });
+    res.status(404).send('File not found');
   }
 });
-
 // Your existing Report API...
 
 // POST route
