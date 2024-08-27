@@ -11,10 +11,6 @@ const app = express();
 app.use(cors()); // Add CORS middleware
 app.use(express.json());
 
-// Configure multer for file uploads
-const uploadDirectory = 'C:/Users/sonuraj/Downloads/Upload';
-const downloadDirectory = 'C:/Users/sonuraj/Downloads/Download';
-
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI, {
@@ -61,7 +57,7 @@ if (!fs.existsSync(uploadsDir)) {
 // });
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDirectory);
+    cb(null, process.env.UPLOADDIRECTORY);
   },
   filename: (req, file, cb) => {
     cb(null, file.originalname);
@@ -100,7 +96,10 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 //   }
 // });
 app.get('/api/download/:fileName', (req, res) => {
-  const filePath = path.join(downloadDirectory, req.params.fileName);
+  const filePath = path.join(
+    process.env.DOWNLOADDIRECTORY,
+    req.params.fileName
+  );
   if (fs.existsSync(filePath)) {
     res.download(filePath);
   } else {
@@ -110,16 +109,43 @@ app.get('/api/download/:fileName', (req, res) => {
 // Your existing Report API...
 
 // POST route
+// app.post('/api/reports', async (req, res) => {
+//   try {
+//     const newReport = new Report(req.body);
+//     const savedReport = await newReport.save();
+//     res.status(201).json(savedReport);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// });
 app.post('/api/reports', async (req, res) => {
   try {
     const newReport = new Report(req.body);
     const savedReport = await newReport.save();
-    res.status(201).json(savedReport);
+
+    // Define the local directory and file path
+    const filePath = path.join(
+      process.env.UPLOADDIRECTORY,
+      `${req.body.fileName}.json`
+    );
+
+    // Convert the saved report to JSON and write it to the file
+    fs.writeFile(filePath, JSON.stringify(savedReport, null, 2), (err) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: 'Error saving file', error: err.message });
+      }
+
+      res.status(201).json({
+        message: 'Report saved and file created',
+        report: savedReport,
+      });
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
-
 // GET all reports
 app.get('/api/reports', async (req, res) => {
   try {
@@ -129,19 +155,35 @@ app.get('/api/reports', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
-// GET a single report by ID
-app.get('/api/reports/:id', async (req, res) => {
+app.get('/api/reports/:fileName', async (req, res) => {
   try {
-    const report = await Report.findById(req.params.id);
+    const fileName = req.params.fileName;
+
+    // Use findOne instead of findById, and search by fileName
+    const report = await Report.findOne({ fileName: fileName });
+
     if (!report) {
       return res.status(404).json({ message: 'Report not found' });
     }
+
     res.json(report);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// // GET a single report by ID
+// app.get('/api/reports/:id', async (req, res) => {
+//   try {
+//     const report = await Report.findById(req.params.id);
+//     if (!report) {
+//       return res.status(404).json({ message: 'Report not found' });
+//     }
+//     res.json(report);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
