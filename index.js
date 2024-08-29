@@ -65,6 +65,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded.');
   }
+
   res.status(200).json({
     message: 'File uploaded successfully',
     originalFilename: req.file.originalname,
@@ -87,6 +88,21 @@ app.get('/api/download/:fileName', async (req, res) => {
     res.status(404).send('File not found here  at all');
   }
 });
+app.get('/api/reports/download/:fileName', async (req, res) => {
+  const report = await Report.findOne({ fileName: req.params.fileName });
+  const baseFileName = path.parse(report.fileName).name;
+
+  const filePath = path.join(
+    process.env.DOWNLOADDIRECTORY,
+    `${baseFileName}.png`
+  );
+
+  if (fs.existsSync(filePath)) {
+    res.download(filePath, report.resultFormat);
+  } else {
+    res.status(404).send('File not found here  at all');
+  }
+});
 
 // Your existing Report API...
 
@@ -97,7 +113,11 @@ app.post('/api/reports', async (req, res) => {
     const newReport = new Report(reportData);
     const savedReport = await newReport.save();
     // Define the local directory and file path
-    const filePath = path.join(process.env.UPLOADDIRECTORY, `${unique}.json`);
+    const baseFileName = path.parse(unique).name;
+    const filePath = path.join(
+      process.env.UPLOADDIRECTORY,
+      `${baseFileName}.json`
+    );
 
     // Convert the saved report to JSON and write it to the file
     fs.writeFile(filePath, JSON.stringify(savedReport, null, 2), (err) => {
