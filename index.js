@@ -82,7 +82,7 @@ app.get('/api/download/:fileName', async (req, res) => {
   );
 
   if (fs.existsSync(filePath)) {
-    res.download(filePath);
+    res.download(filePath, report.resultFormat);
   } else {
     res.status(404).send('File not found here  at all');
   }
