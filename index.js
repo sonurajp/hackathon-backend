@@ -116,7 +116,7 @@ app.post('/api/reports', async (req, res) => {
     const baseFileName = path.parse(unique).name;
     const filePath = path.join(
       process.env.UPLOADDIRECTORY,
-      `${baseFileName}.json`
+      `${baseFileName}_aggregation_conditions.json`
     );
 
     // Convert the saved report to JSON and write it to the file
